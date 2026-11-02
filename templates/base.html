@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <meta
+    name="description"
+    content="A simple place to keep your movie watchlist."
+  >
+
+  <title>{% block title %}Movie Night{% endblock %}</title>
+
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='style.css') }}"
+  >
+</head>
+
+<body>
+  <a class="skip-link" href="#main-content">
+    Skip to content
+  </a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a
+        class="brand"
+        href="{{ url_for('index') }}"
+        aria-label="Movie Night home"
+      >
+        <svg
+          class="brand-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <rect
+            x="3"
+            y="4"
+            width="18"
+            height="16"
+            rx="2"
+            stroke="currentColor"
+            stroke-width="1.7"
+          />
+
+          <path
+            d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"
+            stroke="currentColor"
+            stroke-width="1.7"
+          />
+        </svg>
+
+        Stefan's Movie Gallery
+      </a>
+
+      <span class="header-note">
+        A place for your next good film.
+      </span>
+    </div>
+  </header>
+
+  <main id="main-content" class="container">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages" role="status">
+          {% for category, message in messages %}
+            <p class="flash flash-{{ category }}">
+              {{ message }}
+            </p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+  </main>
+
+  <footer class="site-footer">
+  <div class="container">
+    <p>&copy; 2026 Stefan Movie Gallery. All rights reserved.</p>
+  </div>
+</footer>
+</body>
+</html>

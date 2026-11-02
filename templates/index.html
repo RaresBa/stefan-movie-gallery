@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+{% block title %}My watchlist | Movie Night{% endblock %}
+
+{% block content %}
+{% set to_watch = movies|rejectattr('watched')|list %}
+{% set watched_movies = movies|selectattr('watched')|list %}
+
+<section class="page-intro" aria-labelledby="page-title">
+  <div>
+    <p class="eyebrow">YOUR PERSONAL CINEMA</p>
+    <h1 id="page-title">The movie watchlist</h1>
+    <p class="intro-copy">
+      Keep the films you want to see and remember the ones you have watched.
+    </p>
+  </div>
+
+  <div class="summary" aria-label="Watchlist summary">
+    <p class="summary-item">
+      <strong>{{ movies|length }}</strong> Movies
+    </p>
+    <p class="summary-item">
+      <strong>{{ unwatched_count }}</strong> To watch
+    </p>
+    <p class="summary-item">
+      <strong>{{ watched_count }}</strong> Watched
+    </p>
+  </div>
+</section>
+
+<div class="workspace">
+
+  <aside class="panel movie-form-panel" aria-labelledby="add-movie-title">
+    <h2 id="add-movie-title" class="section-heading">Add a movie</h2>
+
+    <p class="section-copy">
+      Save the details for your next movie night.
+    </p>
+
+    <form
+      class="movie-form"
+      method="post"
+      action="{{ url_for('add_movie') }}"
+      aria-describedby="form-note"
+    >
+      <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+      >
+
+      {% if errors %}
+        <div class="form-errors" role="alert">
+          <ul>
+            {% for error in errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <fieldset class="form-fields" aria-labelledby="add-movie-title">
+        <div class="field">
+          <label for="title">Movie title</label>
+          <input
+            id="title"
+            name="title"
+            type="text"
+            maxlength="200"
+            value="{{ form_data.get('title', '') }}"
+            placeholder="The film you have been meaning to see"
+            required
+          >
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="genre">Genre</label>
+            <select id="genre" name="genre" required>
+              <option
+                value=""
+                disabled
+                {% if not form_data.get('genre') %}selected{% endif %}
+              >
+                Choose a genre
+              </option>
+
+              {% for genre in genres %}
+                <option
+                  value="{{ genre }}"
+                  {% if form_data.get('genre') == genre %}selected{% endif %}
+                >
+                  {{ genre }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="duration">Length (minutes)</label>
+            <input
+              id="duration"
+              name="duration"
+              type="number"
+              min="1"
+              max="2147483647"
+              step="1"
+              value="{{ form_data.get('duration', '') }}"
+              placeholder="120"
+              required
+            >
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="where_to_watch">Where to watch</label>
+          <input
+            id="where_to_watch"
+            name="where_to_watch"
+            type="text"
+            maxlength="200"
+            value="{{ form_data.get('where_to_watch', '') }}"
+            placeholder="Streaming service, cinema, or own copy"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label for="poster_url">
+            Poster image URL <span>(optional)</span>
+          </label>
+          <input
+            id="poster_url"
+            name="poster_url"
+            type="url"
+            maxlength="2048"
+            value="{{ form_data.get('poster_url', '') }}"
+            placeholder="https://example.com/poster.jpg"
+            aria-describedby="poster-help"
+          >
+          <p id="poster-help" class="field-help">
+            Use a direct image link, or leave blank for a simple poster.
+          </p>
+        </div>
+
+        <button class="button button-primary" type="submit">
+          Add movie
+        </button>
+      </fieldset>
+    </form>
+  </aside>
+
+  <div class="collection movie-tables">
+
+    {% for section_id, heading, section_movies in [
+      ('to-watch', 'To be watched', to_watch),
+      ('watched', 'Watched', watched_movies)
+    ] %}
+
+      <section
+        class="movie-table-section{% if section_id == 'watched' %} is-watched{% endif %}"
+        aria-labelledby="{{ section_id }}-title"
+      >
+        <div class="collection-heading">
+          <h2 id="{{ section_id }}-title">{{ heading }}</h2>
+          <p class="collection-note">
+            {{ section_movies|length }}
+            {{ 'movie' if section_movies|length == 1 else 'movies' }}
+          </p>
+        </div>
+
+        <div
+          class="movie-table-wrap"
+          role="region"
+          tabindex="0"
+          aria-labelledby="{{ section_id }}-title"
+        >
+          <table
+            class="movie-table"
+            aria-labelledby="{{ section_id }}-title"
+          >
+            <colgroup>
+              <col class="poster-column">
+              <col class="title-column">
+              <col class="length-column">
+              <col class="provider-column">
+              <col class="actions-column">
+            </colgroup>
+
+            <thead>
+              <tr>
+                <th scope="col">Poster</th>
+                <th scope="col">Movie</th>
+                <th scope="col">Length</th>
+                <th scope="col">Where to watch</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody id="{{ section_id }}-movies">
+              {% for movie in section_movies %}
+                <tr>
+
+                  <td>
+                    <div class="table-poster table-poster-{{ movie.poster_style }}">
+                      <span class="table-poster-placeholder" aria-hidden="true">
+                        {{ movie.title[:1]|upper }}
+                      </span>
+
+                      {% if movie.poster_url %}
+                        <img
+                          class="table-poster-image"
+                          src="{{ movie.poster_url }}"
+                          alt="Poster for {{ movie.title }}"
+                          loading="lazy"
+                          referrerpolicy="no-referrer"
+                          onerror="this.hidden = true;"
+                        >
+                      {% endif %}
+                    </div>
+                  </td>
+
+                  <th scope="row">
+                    <strong class="table-movie-title">
+                      {{ movie.title }}
+                    </strong>
+                    <span class="table-movie-genre">
+                      {{ movie.genre }}
+                    </span>
+                  </th>
+
+                  <td class="table-duration">
+                    {{ movie.duration }} min
+                  </td>
+
+                  <td class="table-provider">
+                    {{ movie.where_to_watch }}
+                  </td>
+
+                  <td>
+                    <div class="table-actions">
+
+                      <form
+                        method="post"
+                        action="{{ url_for('toggle_movie', movie_id=movie.id) }}"
+                      >
+                        <input
+                          type="hidden"
+                          name="csrf_token"
+                          value="{{ csrf_token() }}"
+                        >
+
+                        <button
+                          class="button button-secondary"
+                          type="submit"
+                          aria-label="{{ 'Mark as unwatched' if movie.watched else 'Mark as watched' }}: {{ movie.title }}"
+                        >
+                          {{ 'Mark as unwatched' if movie.watched else 'Mark as watched' }}
+                        </button>
+                      </form>
+
+                      <form
+                        method="post"
+                        action="{{ url_for('delete_movie', movie_id=movie.id) }}"
+                        onsubmit="return confirm('Delete this movie from your watchlist?');"
+                      >
+                        <input
+                          type="hidden"
+                          name="csrf_token"
+                          value="{{ csrf_token() }}"
+                        >
+
+                        <button
+                          class="button button-danger js-delete-movie"
+                          type="button"
+                          data-delete-url="{{ url_for('delete_movie', movie_id=movie.id) }}"
+                          data-movie-title="{{ movie.title }}"
+                          aria-label="Delete {{ movie.title }}"
+                          aria-haspopup="dialog"
+                          aria-controls="delete-dialog"
+                        >
+                          Delete movie
+                        </button>
+                      </form>
+
+                    </div>
+                  </td>
+
+                </tr>
+              {% else %}
+                <tr>
+                  <td class="table-empty" colspan="5">
+                    {% if section_id == 'to-watch' %}
+                      No movies waiting to be watched. Add one using the form.
+                    {% else %}
+                      No watched movies yet. Mark a movie as watched to move it here.
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    {% endfor %}
+  </div>
+</div>
+
+<dialog
+  class="delete-dialog"
+  id="delete-dialog"
+  aria-labelledby="delete-dialog-title"
+  aria-describedby="delete-dialog-description delete-dialog-movie delete-dialog-note"
+>
+  <form id="delete-dialog-form" method="post">
+    <input
+      type="hidden"
+      name="csrf_token"
+      value="{{ csrf_token() }}"
+    >
+
+    <div class="delete-dialog-body">
+
+      <button
+        class="delete-dialog-close"
+        type="button"
+        data-close-delete
+        aria-label="Cancel deletion"
+      >
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="m6 6 12 12M18 6 6 18"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+
+      <div class="delete-dialog-icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+          />
+          <path
+            d="m5 6 1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v6M14 10v6"
+          />
+        </svg>
+      </div>
+
+      <p class="delete-dialog-eyebrow">YOUR WATCHLIST</p>
+
+      <h2 id="delete-dialog-title">Delete movie?</h2>
+
+      <p
+        class="delete-dialog-description"
+        id="delete-dialog-description"
+      >
+        This movie will be removed from your watchlist.
+      </p>
+
+      <div class="delete-movie-preview">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect
+            x="3"
+            y="4"
+            width="18"
+            height="16"
+            rx="2"
+            stroke="currentColor"
+            stroke-width="1.7"
+          />
+          <path
+            d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"
+            stroke="currentColor"
+            stroke-width="1.7"
+          />
+        </svg>
+
+        <strong id="delete-dialog-movie"></strong>
+      </div>
+
+      <p class="delete-dialog-note" id="delete-dialog-note">
+        Its saved details and watched status will be deleted.
+      </p>
+    </div>
+
+    <div class="delete-dialog-actions">
+      <button
+        class="button button-secondary"
+        type="button"
+        data-close-delete
+        autofocus
+      >
+        Cancel
+      </button>
+
+      <button
+        class="button button-delete-confirm"
+        id="delete-confirm"
+        type="submit"
+      >
+        Delete movie
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  (() => {
+    const dialog = document.getElementById("delete-dialog");
+    const deleteForm = document.getElementById("delete-dialog-form");
+    const movieTitle = document.getElementById("delete-dialog-movie");
+    const confirmButton = document.getElementById("delete-confirm");
+    const dialogButtons = dialog.querySelectorAll("button");
+
+    let deleting = false;
+    let triggerButton = null;
+
+    document.querySelectorAll(".js-delete-movie").forEach((button) => {
+      button.addEventListener("click", () => {
+        triggerButton = button;
+
+        deleteForm.action = button.dataset.deleteUrl;
+        movieTitle.textContent = button.dataset.movieTitle;
+
+        dialog.showModal();
+      });
+    });
+
+    function closeDialog() {
+      if (!deleting) {
+        dialog.close();
+      }
+    }
+
+    dialog.querySelectorAll("[data-close-delete]").forEach((button) => {
+      button.addEventListener("click", closeDialog);
+    });
+
+    dialog.addEventListener("cancel", (event) => {
+      if (deleting) {
+        event.preventDefault();
+      }
+    });
+
+    dialog.addEventListener("close", () => {
+      if (triggerButton) {
+        triggerButton.focus({ preventScroll: true });
+      }
+    });
+
+    dialog.addEventListener("click", (event) => {
+      if (event.target !== dialog) {
+        return;
+      }
+
+      const bounds = dialog.getBoundingClientRect();
+
+      const outside =
+        event.clientX < bounds.left ||
+        event.clientX > bounds.right ||
+        event.clientY < bounds.top ||
+        event.clientY > bounds.bottom;
+
+      if (outside) {
+        closeDialog();
+      }
+    });
+
+    deleteForm.addEventListener("submit", (event) => {
+      if (deleting) {
+        event.preventDefault();
+        return;
+      }
+
+      deleting = true;
+
+      dialogButtons.forEach((button) => {
+        button.disabled = true;
+      });
+
+      confirmButton.textContent = "Deleting…";
+    });
+
+    window.addEventListener("pageshow", () => {
+      deleting = false;
+
+      dialogButtons.forEach((button) => {
+        button.disabled = false;
+      });
+
+      confirmButton.textContent = "Delete movie";
+
+      if (dialog.open) {
+        dialog.close();
+      }
+    });
+  })();
+</script>
+{% endblock %}
