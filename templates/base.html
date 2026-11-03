@@ -3,17 +3,16 @@
 <head>
   <meta charset="utf-8">
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <meta
     name="description"
-    content="A simple place to keep your movie watchlist."
+    content="Stefan Movie Gallery: save movies and keep track of what you have watched."
   >
 
-  <title>{% block title %}Movie Night{% endblock %}</title>
+  <title>
+    {% block title %}Stefan Movie Gallery{% endblock %}
+  </title>
 
   <link
     rel="stylesheet"
@@ -31,7 +30,7 @@
       <a
         class="brand"
         href="{{ url_for('index') }}"
-        aria-label="Movie Night home"
+        aria-label="Stefan Movie Gallery home"
       >
         <svg
           class="brand-icon"
@@ -56,7 +55,7 @@
           />
         </svg>
 
-        Stefan's Movie Gallery
+        Stefan Movie Gallery
       </a>
 
       <span class="header-note">
@@ -65,28 +64,16 @@
     </div>
   </header>
 
-  <main id="main-content" class="container">
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-messages" role="status">
-          {% for category, message in messages %}
-            <p class="flash flash-{{ category }}">
-              {{ message }}
-            </p>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
+  <main id="main-content" class="container site-main">
     {% block content %}{% endblock %}
-
   </main>
 
   <footer class="site-footer">
-  <div class="container">
-    <p>&copy; 2026 Stefan Movie Gallery. All rights reserved.</p>
-  </div>
-</footer>
+    <div class="container">
+      <p>
+        &copy; 2026 Stefan Movie Gallery. All rights reserved.
+      </p>
+    </div>
+  </footer>
 </body>
 </html>

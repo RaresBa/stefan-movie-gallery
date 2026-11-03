@@ -1,5 +1,5 @@
 import os
-from urllib.parse import urlsplit
+from random import Random
 
 from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
@@ -8,7 +8,6 @@ from flask_wtf.csrf import CSRFError, CSRFProtect
 
 app = Flask(__name__)
 
-# Deployment and database configuration.
 on_vercel = os.environ.get("VERCEL") == "1"
 database_url = os.environ.get("DATABASE_URL", "").strip()
 secret_key = os.environ.get("SECRET_KEY", "").strip()
@@ -18,8 +17,6 @@ if on_vercel and (not database_url or not secret_key):
         "Set DATABASE_URL and SECRET_KEY in Vercel before deploying."
     )
 
-# Use Psycopg 3 for PostgreSQL connections.
-# The hostname, password, database name, and SSL parameters are preserved.
 if database_url.startswith("postgres://"):
     database_url = database_url.replace(
         "postgres://",
@@ -33,7 +30,6 @@ elif database_url.startswith("postgresql://"):
         1,
     )
 
-# Local development uses SQLite when DATABASE_URL is not set.
 database_url = database_url or "sqlite:///movies.db"
 uses_postgres = database_url.startswith("postgresql+psycopg://")
 
@@ -90,8 +86,7 @@ class Movie(db.Model):
 
     @property
     def poster_style(self):
-        return ("orbit", "sunrise", "city")[(self.id - 1) % 3]
-
+        return Random(self.id).choice(("orbit", "sunrise", "city"))
 
 @app.cli.command("init-db")
 def init_db():
@@ -120,49 +115,13 @@ def render_watchlist(form_data=None, errors=None):
         errors=errors or [],
     )
 
-
-def valid_poster_url(value):
-    if not value:
-        return True
-
-    if len(value) > 2048:
-        return False
-
-    if any(
-        char.isspace() or ord(char) < 32 or ord(char) == 127
-        for char in value
-    ):
-        return False
-
-    try:
-        parts = urlsplit(value)
-        port = parts.port
-
-        return (
-            parts.scheme in ("http", "https")
-            and bool(parts.hostname)
-            and parts.username is None
-            and parts.password is None
-            and (port is None or port > 0)
-        )
-    except ValueError:
-        return False
-
-
 @app.get("/")
 def index():
     return render_watchlist()
 
-
 @app.post("/add")
 def add_movie():
-    fields = (
-        "title",
-        "genre",
-        "duration",
-        "where_to_watch",
-        "poster_url",
-    )
+    fields = ("title", "genre", "duration", "where_to_watch")
 
     form_data = {
         field: request.form.get(field, "").strip()
@@ -186,6 +145,7 @@ def add_movie():
 
         if not 1 <= duration <= 2_147_483_647:
             raise ValueError
+
     except ValueError:
         errors.append(
             "Enter a valid positive whole number for the length in minutes."
@@ -194,11 +154,6 @@ def add_movie():
     if not 1 <= len(form_data["where_to_watch"]) <= 200:
         errors.append(
             "Enter where to watch the movie, using 1 to 200 characters."
-        )
-
-    if not valid_poster_url(form_data["poster_url"]):
-        errors.append(
-            "Use a valid http:// or https:// poster URL, or leave it blank."
         )
 
     if errors:
@@ -212,16 +167,10 @@ def add_movie():
         genre=form_data["genre"],
         duration=duration,
         where_to_watch=form_data["where_to_watch"],
-        poster_url=form_data["poster_url"],
     )
 
     db.session.add(movie)
     db.session.commit()
-
-    flash(
-        f'Added "{movie.title}" to your watchlist.',
-        "success",
-    )
 
     return redirect(url_for("index"), code=303)
 
@@ -233,31 +182,17 @@ def toggle_movie(movie_id):
     movie.watched = not movie.watched
     db.session.commit()
 
-    status = "watched" if movie.watched else "unwatched"
-
-    flash(
-        f'Marked "{movie.title}" as {status}.',
-        "success",
-    )
-
     return redirect(url_for("index"), code=303)
 
 
 @app.post("/delete/<int:movie_id>")
 def delete_movie(movie_id):
     movie = db.get_or_404(Movie, movie_id)
-    title = movie.title
 
     db.session.delete(movie)
     db.session.commit()
 
-    flash(
-        f'Deleted "{title}" from your watchlist.',
-        "success",
-    )
-
     return redirect(url_for("index"), code=303)
-
 
 @app.errorhandler(CSRFError)
 def handle_csrf_error(error):

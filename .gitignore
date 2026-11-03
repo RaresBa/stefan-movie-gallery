@@ -1,26 +1,13 @@
-# Local virtual environment
 flask_env/
-
-# Python-generated files
 __pycache__/
 *.py[cod]
-
-# Local databases
 instance/
 *.db
 *.sqlite
 *.sqlite3
-
-# Local secrets
 .env
 .env.*
 !.env.example
-
-# macOS files
 .DS_Store
-
-# Local Vercel configuration
 .vercel/
-
-# Generated deployment assets
 public/static/
